@@ -1,0 +1,21 @@
+{
+  "name": "Tab Inspector",
+  "description": "Record the life of your tabs",
+  "version": "0.3",
+  "permissions": [
+    "http://*/*", 
+    "unlimitedStorage",
+    "storage",
+    "tabs",
+    "alarms"
+    ],
+  "background": {
+    "persistent": true,
+    "scripts": ["background.js", "d3.v3.min.js", "d3-tip.js"]
+  },
+  "browser_action": {
+    "default_title": "show tab inspector"
+  },
+  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+  "manifest_version": 2
+}

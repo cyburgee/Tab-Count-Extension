@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <style>
+        body {
+        font: 10px sans-serif;
+    }
+
+    .chart text {
+      fill: black;
+      font: 10px sans-serif;
+      text-anchor: end;
+    }
+
+    .label {
+      fill: #777;
+    }
+
+    .year.label {
+      font: 500 100px "Helvetica Neue";
+      fill: #ddd;
+    }
+
+    .year.label.active {
+      fill: #aaa;
+    }
+
+    .overlay {
+      fill: none;
+      pointer-events: all;
+      cursor: ew-resize;
+    }
+
+        </style>
+        <title>Dat Tab Life</title>
+        <script type="text/javascript" src="d3.v3.min.js"></script>
+        <script src="d3-tip.js"></script>
+        <script src="underscore-min.js"></script>
+    </head>
+    <body>
+      <svg class="chart"></svg>
+      <script src="display.js"></script>
+    </body>
+</html>     
