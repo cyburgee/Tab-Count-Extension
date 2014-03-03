@@ -11,7 +11,7 @@
     ],
   "background": {
     "persistent": true,
-    "scripts": ["background.js", "d3.v3.min.js", "d3-tip.js"]
+    "scripts": ["background.js", "d3.v3.min.js", "d3-tip.js", "underscore-min.js"]
   },
   "browser_action": {
     "default_title": "show tab inspector"

@@ -1,5 +1,4 @@
-//var width = window.innerWidth,
-//    height = window.innerHeight;
+
 
 var margin = {top: 20, right: 60, bottom: 30, left: 20},
     width = window.innerWidth - margin.left - margin.right,
@@ -9,15 +8,6 @@ var svg = d3.select(".chart").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)
   .append("g");
-  //.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-  //.call(d3.behavior.zoom().scaleExtent([1,20]).on("zoom",zoom))
-  //.append("g");
-
-
-/*function zoom() {
-  svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
-  svg.select("g.x.axis").call(xAxis);
-}*/
 
 var startTime = -1;
 var endTime = -1;
@@ -34,21 +24,11 @@ function getTabRange(starting, ending, timeStamps) {
   timeStamps = timeStamps.reverse();
   var lowInd = timeStamps.indexOf(low);
   var highInd = timeStamps.indexOf(high);
-  //console.log(timeStamps.slice(lowInd,highInd));
   return timeStamps.slice(lowInd,highInd);
 }
 
-/*function numTabsAtTime(timeStamp){
-
-
-}
-function numWindowsAtTime(timeStamp){
-
-}*/
-
 //get the stored tabs
 chrome.storage.local.get(null, function(items){
-
 
   console.log(items);
   var timeStamps = Object.keys(items).sort();
@@ -56,26 +36,23 @@ chrome.storage.local.get(null, function(items){
     return parseInt(x,10);
   });
   var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
-  //console.log(timeStampRange);
-
-  /*chrome.storage.local.getBytesInUse(null,function(bytesInUse) {
-    console.log("bytesInUse: " + bytesInUse);
-  });*/
-
   
   var startTime = timeStamps[0];
   var endTime = timeStamps[timeStamps.length -1];
 
+  var tabAmnt = [];
+  var windAmnt = [];
   function getTabsinRange(timeStampRange){
     var tabs = [];
     for(var time in timeStampRange) {
-      var timePiece = timeStamps[time];
+      var numberOfTabs = 0;
+      var numberOfWindows = 0;
+      numberOfWindows += items[timeStamps[time]].windows.length;
       for(var wind in items[timeStamps[time]].windows){
+        numberOfTabs += items[timeStamps[time]].windows[wind].length;
         for(var ind in items[timeStamps[time]].windows[wind]){
           var tab = items[timeStamps[time]].windows[wind][ind];
-          //console.log(tab);
           var sesh = items[timeStamps[time]].sessionId;
-          //console.log(sesh);
           var tabIsAlive = _.find(tabs,function(t) {
             return t.tabId == tab.tabId && t.windowId == tab.windowId && t.sessionId == sesh;
           });
@@ -86,6 +63,8 @@ chrome.storage.local.get(null, function(items){
               sessionId: items[timeStamps[time]].sessionId,
               tabId: tab.tabId,
               windowId: tab.windowId,
+              tabIndex: ind,
+              windowIndex: wind,
               born: +timeStamps[time],
               died: -1
             }
@@ -93,8 +72,9 @@ chrome.storage.local.get(null, function(items){
           }
         }
       }
+      tabAmnt.push(numberOfTabs);
+      windAmnt.push(numberOfWindows)
     }
-    //console.log(tabs);
 
     for (var tab in tabs){
       if (tabs[tab].died == -1){
@@ -108,8 +88,14 @@ chrome.storage.local.get(null, function(items){
 
 
   var tabs = getTabsinRange(timeStampRange,tabs);
+  var maxNumTabs = d3.max(tabAmnt);
+  var maxNumWindows = d3.max(windAmnt);
+  console.log("maxTabs: " + maxNumTabs);
+  console.log("maxWindows " + maxNumWindows);
+
   
-  var barHeight = height/tabs.length;
+  var barHeight = height/maxNumWindows/maxNumTabs;
+  console.log("barHeight " + barHeight);
   
   var x = d3.time.scale()
     .domain([startTime, endTime])
@@ -119,20 +105,20 @@ chrome.storage.local.get(null, function(items){
     .domain([0, tabs.length])
     .range([0, height]);
 
-  /*var xAxis = d3.svg.axis()
-    .scale(x)
-    .orient("bottom")
-    .tickSize(-height, 0)
-    .tickPadding(6);*/
+  var windowAxis = d3.scale.linear()
+    .domain([0, 2*maxNumWindows])
+    .range([height/maxNumWindows, height]);
 
+  var tabAxis = d3.scale.linear()
+    .domain([0, maxNumTabs])
+    .range([0, height/maxNumWindows]);
+
+  var printNum = 0;
 
   var zoom = d3.behavior.zoom()
-    .scaleExtent([1,10])
+    .scaleExtent([1,40])
     .on("zoom", draw);
 
-  /*svg.append("g")
-      .attr("class", "x axis")
-      .attr("transform", "translate(0," + height + ")");*/
   svg.append("rect")
       .attr("width", width)
       .attr("height", height)
@@ -140,11 +126,6 @@ chrome.storage.local.get(null, function(items){
       .attr("stroke", "black")
       .attr("stroke-width", 0.5);
 
-  svg.append("rect")
-      .attr("class", "overlay")
-      .attr("width", width)
-      .attr("height", height)
-      .call(zoom);
 
   var colorScale = d3.scale.linear()
     .domain([0, 1])
@@ -158,10 +139,7 @@ chrome.storage.local.get(null, function(items){
 
   bar.append("rect")
     .attr("transform", function(d,i) {
-      if(d.born == null){
-        console.log(d);
-      }
-      return "translate(" + x(d.born) + "," + y(i) + ")";
+      return "translate(" + x(d.born) + "," + transformTab(d,i) + ")";
     })
     .attr("width", function(d) {
       if(isNaN(x(d.died) - x(d.born))){
@@ -176,13 +154,19 @@ chrome.storage.local.get(null, function(items){
     })
     .attr("height", barHeight/2)
     .style("fill", function(d){
-      var sesh = d.sessionId;
+      var sesh = d.tabId;//d.sessionId;
       return colorScale(sesh);
     });
 
     bar.attr('opacity',0);
     bar.transition().duration(500)
       .attr('opacity',1);
+
+  svg.append("rect")
+      .attr("class", "overlay")
+      .attr("width", width)
+      .attr("height", height)
+      .call(zoom);
 
   svg.append("rect")
       .attr("width",width)
@@ -207,106 +191,28 @@ chrome.storage.local.get(null, function(items){
     .tickPadding(6);
 
   zoom.x(x);
-    draw();
+  
+  draw();
+
+  function transformTab(d,i){
+    if (printNum < 10) {
+      console.log("window: " + d.windowIndex);
+      console.log("windowPix: " + windowAxis(d.windowIndex));
+      console.log("tab: " + d.tabIndex);
+      console.log("tabPix: " + tabAxis(d.tabIndex));
+      console.log(windowAxis(2*d.windowIndex) + tabAxis(d.tabIndex))
+    }
+    printNum++;
+    return windowAxis(2*d.windowIndex) + tabAxis(d.tabIndex);
+    //return y(i);
+  }
 
   function draw() {
     svg.select("g.x.axis").call(xAxis);
-    bar.attr("transform", transform);
-    //bar.selectAll("rect").call(xAxis);
-  }
-  function transform(d) {
-  return "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")";
-}
-  /*function redraw(someArray){
-
-    var bars = svg.selectAll("g")
-      .data(someArray);
-      
-
-    bars.exit().transition().duration(1000)
-      .attr('opacity',0)
-      .remove();
+    bar.attr("transform", transformView);
   }
 
-
-  var label = svg.append("text")
-    .attr("class", "year label")
-    .attr("text-anchor", "end")
-    .attr("y", height - 24)
-    .attr("x", width)
-    .text(new Date(startTime).toLocaleDateString() + " " + new Date(startTime).toLocaleTimeString());
-
-  var box = label.node().getBBox();
-
-  var overlay = svg.append("rect")
-      .attr("class", "overlay")
-      .attr("x", box.x)
-      .attr("y", box.y)
-      .attr("width", box.width)
-      .attr("height", box.height)
-      .on("mouseover", enableInteraction);
-
-  function enableInteraction() {
-    var yearScale = d3.scale.linear()
-        .domain([startTime, endTime])
-        .range([box.x + 10, box.x + box.width - 10])
-        .clamp(true);
-
-    // Cancel the current transition, if any.
-    svg.transition().duration(0);
-
-    overlay
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout)
-        .on("mousemove", mousemove)
-        .on("touchmove", mousemove);
-
-    function mouseover() {
-      label.classed("active", true);
-    }
-
-    function mouseout() {
-      label.classed("active", false);
-    }
-
-    function mousemove() {
-      var scaleThing = yearScale.invert(d3.mouse(this)[0]);
-      //console.log(scaleThing);
-      var times = getTabRange(scaleThing,endTime,timeStamps);
-      //console.log(times);
-      var data = [];
-      _.map(times,function(i){
-        //console.log(i);
-        data.push(tabs[i]);
-      });
-    
-      var newTabs = getTabsinRange(times);
-      
-      redraw(newTabs);
-      //console.log(data);
-      displayYear(yearScale.invert(d3.mouse(this)[0]));
-    }*/
-
-    // Tweens the entire chart by first tweening the year, and then the data.
-      // For the interpolated data, the dots and label are redrawn.
-    /*function tweenYear() {
-      var year = d3.interpolateNumber(startTime, endTime);
-      return function(t) { displayYear(year(t)); };
-    }
-    // Updates the display to show the specified year.
-    function displayYear(year) {
-      //dot.data(interpolateData(year), key).call(position).sort(order);
-      //console.log(year.toDateString());
-      label.text(new Date(year).toLocaleDateString() + " " + new Date(year).toLocaleTimeString());
-    }*/
-    /*var items = foo.selectAll('bar').data(someArray);
-    items.enter().append('bar')
-      .attr('opacity',0)
-      .attr('foo',initialPreAnimationValue);
-    items.exit().transition().duration(500)
-      .attr('opacity',0)
-      .remove();
-    items.transition.duration(500)
-      .attr('opacity',1)
-      .attr('foo',function(d){ return d });*/
+  function transformView(d) {
+    return "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")";
+  }
 });
