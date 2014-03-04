@@ -1,13 +1,14 @@
 
 
-var margin = {top: 20, right: 60, bottom: 30, left: 20},
+var margin = {top: 20, right: 60, bottom: 30, left: 60},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
 
 var svg = d3.select(".chart").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)
-  .append("g");
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
 var startTime = -1;
 var endTime = -1;
@@ -27,14 +28,17 @@ function getTabRange(starting, ending, timeStamps) {
   return timeStamps.slice(lowInd,highInd);
 }
 
-var tip = d3.tip()
-  .attr('class', 'd3-tip')
-  .offset([-10, 0])
-  .html(function(d) {
-    return "<strong><span style='color:black'>" + maxNumWindows + "</span></strong>";
-  })  
+function secondsToString(seconds) {
+  var numyears = Math.floor(seconds / 31536000);
+  var numdays = Math.floor((seconds % 31536000) / 86400); 
+  var numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
+  var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
+  var numseconds = Math.floor((((seconds % 31536000) % 86400) % 3600) % 60);
+  return numyears + " years " +  numdays + " days " + numhours + " hours " + numminutes + " minutes " + numseconds + " seconds";
+}
 
-svg.call(tip);
+var maxNumWindows = 0;
+
 
 
 //get the stored tabs
@@ -63,14 +67,15 @@ chrome.storage.local.get(null, function(items){
       var numberOfTabs = 0;
       var numberOfWindows = 0;
       numberOfWindows += items[timeStamps[time]].windows.length;
+      var sesh = items[timeStamps[time]].sessionId;
       for(var wind in items[timeStamps[time]].windows){
         numberOfTabs += items[timeStamps[time]].windows[wind].length;
         for(var ind in items[timeStamps[time]].windows[wind]){
           var tab = items[timeStamps[time]].windows[wind][ind];
           //console.log(tab);
-          var sesh = items[timeStamps[time]].sessionId;
+          //var sesh = items[timeStamps[time]].sessionId;
           //console.log(sesh);
-          seshNums.push(sesh);
+          //seshNums.push(sesh);
           var tabIsAlive = _.find(tabs,function(t) {
             return t.tabId == tab.tabId && t.windowId == tab.windowId && t.sessionId == sesh;
           });
@@ -88,6 +93,7 @@ chrome.storage.local.get(null, function(items){
           }
         }
       }
+      seshNums.push(sesh);
       tabAmnt.push(numberOfTabs);
       windAmnt.push(numberOfWindows);
     }
@@ -102,16 +108,32 @@ chrome.storage.local.get(null, function(items){
     return tabs;
   }
 
+
   var tabs = getTabsinRange(timeStampRange,tabs);
 
   var maxSesh = d3.max(seshNums);
-  var maxSeshTime = seshNums.indexOf(maxSesh);
+  var maxSeshTime = timeStamps[seshNums.indexOf(maxSesh)];
 
   var maxNumTabs = d3.max(tabAmnt);
-  var maxTabsTime = tabAmnt.indexOf(maxNumTabs);
+  var maxTabsTime = timeStamps[tabAmnt.indexOf(maxNumTabs)];
 
-  var maxNumWindows = d3.max(windAmnt);
-  var maxWindTime = windAmnt.indexOf(maxNumWindows);
+  maxNumWindows = d3.max(windAmnt);
+  var maxWindTime = timeStamps[windAmnt.indexOf(maxNumWindows)];
+
+
+  var tabLives = [];
+  var maxWindInd = [];
+  var maxTabsInd = [];
+  for(var tab in tabs ){
+      tabLives.push(tabs[tab].died - tabs[tab].born);
+      if (tabs[tab].born <= maxWindTime && tabs[tab].died >= maxWindTime)
+        maxWindInd.push(tab);
+      if (tabs[tab].born <= maxTabsTime && tabs[tab].died >= maxTabsTime)
+        maxTabsInd.push(tab);
+    }
+
+  var oldestTab = d3.max(tabLives);
+  var oldestTabIndex = tabLives.indexOf(oldestTab);
 
   console.log("maxSesh: " + maxSesh);
   console.log("maxSeshTime: " + maxSeshTime);
@@ -130,10 +152,6 @@ chrome.storage.local.get(null, function(items){
     .domain([0, tabs.length])
     .range([margin.top, height-margin.bottom]);
 
-  var zoom = d3.behavior.zoom()
-    .scaleExtent([1,10])
-    .on("zoom", draw);
-
   svg.append("rect")
       .attr("width", width)
       .attr("height", height)
@@ -151,13 +169,35 @@ chrome.storage.local.get(null, function(items){
     .data(tabs)
     .enter().append("g");
 
+  svg.append("text")
+    .attr("transform", "translate(" + (width - margin.left) +"," + 20 + ")")
+    .text("Oldest Tab: " + secondsToString(oldestTab/1000));
+
   bar.append("rect")
     .attr("transform", function(d,i) {
       if(d.born == null){
         console.log(d);
       }
-      //if (i == maxWindTime)
-      //  tip.show(d);
+
+      /*if (d.born == maxTabsTime){
+        //console.log("fuckit");
+        //console.log("translate(" + x(d.born) + "," + y(i) + ")");
+        bar.append("text")
+          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
+          .text("Most Tabs Open: " + maxNumTabs);
+      }
+      else if (d.born == maxWindTime){
+        //console.log("fuckit");
+        //console.log("translate(" + x(d.born) + "," + y(i) + ")");
+        bar.append("text")
+          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
+          .text("Most Windows Open: " + maxNumWindows);
+      }
+      else if (i == oldestTabIndex){
+        bar.append("text")
+          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
+          .text("Oldest Tab: " + secondsToString(oldestTab/1000));
+      }*/
       return "translate(" + x(d.born) + "," + y(i) + ")";
     })
     .attr("width", function(d) {
@@ -173,15 +213,22 @@ chrome.storage.local.get(null, function(items){
     })
     .attr("height", 0.75*barHeight)
     //.attr("rx", 0.5)
-    .attr("ry", 0.5)
+    //.attr("ry", 0.5)
     .style("fill", function(d){
       var sesh = d.sessionId;
       return colorScale(sesh);
     });
 
     bar.attr('opacity',0);
-    bar.transition().duration(500)
+    bar.transition().duration(1000)
       .attr('opacity',1);
+
+
+  var zoom = d3.behavior.zoom()
+    .x(x)
+    .y(y)
+    .scaleExtent([1,80])
+    .on("zoom", draw);
 
   svg.append("rect")
       .attr("class", "overlay")
@@ -201,9 +248,17 @@ chrome.storage.local.get(null, function(items){
       .style("fill", "white")
       .attr("transform", "translate(" + width +",0)");
 
-  svg.append("g")
-    .attr("class", "x axis")
-    .attr("transform", "translate(0," + height + ")");
+  svg.append("rect")
+    .attr("width",width)
+    .attr("height", margin.top)
+    .attr("transform", "translate(0," + -margin.top + ")")
+    .style("fill", "white");
+
+  svg.append("rect")
+    .attr("width",margin.left)
+    .attr("height", height + margin.top + margin.bottom)
+    .attr("transform", "translate(" + -margin.left + "," + -margin.top +")")
+    .style("fill", "white");
 
 
   var xAxis = d3.svg.axis()
@@ -212,11 +267,28 @@ chrome.storage.local.get(null, function(items){
     .tickSize(-height, 0)
     .tickPadding(6);
 
-  zoom.x(x);
-    draw();
+  var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left")
+    .tickSize(-height, 0)
+    .tickPadding(6);
+
+  svg.append("g")
+    .attr("class", "x axis")
+    .attr("transform", "translate(0," + height + ")")
+    .call(xAxis);
+
+  svg.append("g")
+    .attr("class", "y axis")
+    .call(yAxis);
+
+  //zoom.y(y);
+  //zoom.x(x);
+  //draw();
 
   function draw() {
     svg.select("g.x.axis").call(xAxis);
+    svg.select("g.y.axis").call(yAxis);
     bar.attr("transform", transform);
   }
 
