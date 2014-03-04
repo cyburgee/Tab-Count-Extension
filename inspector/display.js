@@ -1,6 +1,6 @@
 
 
-var margin = {top: 20, right: 60, bottom: 30, left: 60},
+var margin = {top: 60, right: 60, bottom: 60, left: 60},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
 
@@ -129,8 +129,11 @@ chrome.storage.local.get(null, function(items){
       if (tabs[tab].born <= maxWindTime && tabs[tab].died >= maxWindTime)
         maxWindInd.push(tab);
       if (tabs[tab].born <= maxTabsTime && tabs[tab].died >= maxTabsTime)
-        maxTabsInd.push(tab);
-    }
+        maxTabsInd.push(+tab);
+  }
+
+  console.log(maxTabsInd);
+
 
   var oldestTab = d3.max(tabLives);
   var oldestTabIndex = tabLives.indexOf(oldestTab);
@@ -169,9 +172,6 @@ chrome.storage.local.get(null, function(items){
     .data(tabs)
     .enter().append("g");
 
-  svg.append("text")
-    .attr("transform", "translate(" + (width - margin.left) +"," + 20 + ")")
-    .text("Oldest Tab: " + secondsToString(oldestTab/1000));
 
   bar.append("rect")
     .attr("transform", function(d,i) {
@@ -244,9 +244,9 @@ chrome.storage.local.get(null, function(items){
 
   svg.append("rect")
       .attr("width",width)
-      .attr("height", height*2)
+      .attr("height", height+ margin.top + margin.bottom)
       .style("fill", "white")
-      .attr("transform", "translate(" + width +",0)");
+      .attr("transform", "translate(" + width +"," + -margin.top + ")");
 
   svg.append("rect")
     .attr("width",width)
@@ -282,9 +282,93 @@ chrome.storage.local.get(null, function(items){
     .attr("class", "y axis")
     .call(yAxis);
 
-  //zoom.y(y);
-  //zoom.x(x);
-  //draw();
+  svg.append("text")
+    .attr("transform", "translate(" + -margin.left +"," + height/2 + ")")
+    .style("text-anchor", "start")
+    .style("font-weight", "bold")
+    .text("Tab");
+
+  svg.append("text")
+    .attr("transform", "translate(" + (width/2) + "," + (height + margin.bottom/2) + ")")
+    .style("text-anchor", "middle")
+    .style("font-weight", "bold")
+    .text("Time");
+
+  var oldTabLabel = svg.append("text")
+    .attr("x", (width - 10) )
+    .attr("y", 20)
+    .style("font", "15px Helvetica Neue")
+    .style("font-weight","bold")
+    .text("Longest-Lived Tab: " + secondsToString(oldestTab/1000));
+
+  var oldTabBox = oldTabLabel.node().getBBox();
+
+  console.log(oldTabBox);
+
+  var oldTabOverlay = svg.append("rect")
+        .attr("class", "overlay")
+        .attr("x", oldTabBox.x)
+        .attr("y", oldTabBox.y)
+        .attr("width", oldTabBox.width)
+        .attr("height", oldTabBox.height)
+        .on("mouseover", function() {
+          var data = tabs[oldestTabIndex];
+          var select = bar[0][oldestTabIndex];
+          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+            if (i != oldestTabIndex)
+              return d;
+          });
+          selectAgain.selectAll("rect")
+            .style("opacity", 0.25);
+        })
+        .on("mouseout", function(){
+          var data = tabs[oldestTabIndex];
+          var select = bar[0][oldestTabIndex];
+          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+            if (i != oldestTabIndex)
+              return d;
+          });
+          selectAgain.selectAll("rect")
+            .style("opacity", 1);
+        });
+
+
+  var mostTabsLabel = svg.append("text")
+    .attr("x", (width - 10) )
+    .attr("y", 20+15)
+    .style("font", "15px Helvetica Neue")
+    .style("font-weight","bold")
+    .text("Most Tabs Open: " + maxNumTabs);
+
+  var mostTabBox = mostTabsLabel.node().getBBox();
+
+  console.log(mostTabBox);
+
+  var mostTabOverlay = svg.append("rect")
+        .attr("class", "overlay")
+        .attr("x", mostTabBox.x)
+        .attr("y", mostTabBox.y)
+        .attr("width", mostTabBox.width)
+        .attr("height", mostTabBox.height)
+        .on("mouseover", function() {
+          var select = bar[0][maxTabsInd];
+          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+            if (maxTabsInd.indexOf(i) < 0)
+              return d;
+          });
+          selectAgain.selectAll("rect")
+            .style("opacity", 0.25);
+        })
+        .on("mouseout", function(){
+          var select = bar[0][maxTabsInd];
+          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+            if (maxTabsInd.indexOf(i) < 0)
+              return d;
+          });
+          selectAgain.selectAll("rect")
+            .style("opacity", 1);
+        });
+
 
   function draw() {
     svg.select("g.x.axis").call(xAxis);
