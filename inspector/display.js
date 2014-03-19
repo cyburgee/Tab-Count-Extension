@@ -2,12 +2,88 @@
 var margin = {top: 60, right: 60, bottom: 60, left: 60},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
+    twoPi = 2 * Math.PI,
+    progress = 0,
+    formatPercent = d3.format(".0%");
+
+var arc = d3.svg.arc()
+    .startAngle(0)
+    .innerRadius(180)
+    .outerRadius(240);
+
 
 var svg = d3.select("body").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)
   .append("g")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+svg.append("rect")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("fill", "whitesmoke")
+  .attr('opacity',0)
+  .transition().duration(250)
+    .attr('opacity',1);
+
+svg.append("text")
+  .attr("transform", "translate(" + -margin.left +"," + height/2 + ")")
+  .style("text-anchor", "start")
+  .style("font-weight", "bold")
+  .text("Tab")
+  .attr('opacity',0)
+  .transition().duration(250)
+    .attr('opacity',1);
+
+svg.append("text")
+  .attr("transform", "translate(" + (width/2) + "," + (height + margin.bottom/2) + ")")
+  .style("text-anchor", "middle")
+  .style("font-weight", "bold")
+  .text("Time")
+  .attr('opacity',0)
+  .transition().duration(250)
+    .attr('opacity',1);
+
+var colorScale = d3.scale.linear()
+  .domain([0, 1])
+  .range(["hsl(0,50%,50%)", "hsl(200,50%,50%)"])
+  .interpolate(d3.interpolateHsl);
+
+
+var svg2 = d3.select("svg").append("svg")
+  .attr("x", margin.left)
+  .attr("y", margin.top)
+  .attr("width", width + margin.left + margin.right)
+  .attr("height", height + margin.top + margin.bottom)
+
+
+var svg3 = svg2.append("svg")
+  .attr("width", width)
+  .attr("height", height)
+  .attr("overflow", "hidden")
+
+/*var svgArc = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height)
+  .append("g")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+    */
+
+var meter = svg.append("g")
+    .attr("class", "progress-meter")
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+    .attr('opacity', 1);
+
+meter.append("path")
+    .attr("class", "background")
+    .attr("d", arc.endAngle(twoPi));
+
+var foreground = meter.append("path")
+    .attr("class", "foreground");
+
+var text = meter.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", ".35em");
 
 var startTime = -1;
 var endTime = -1;
@@ -33,6 +109,14 @@ function secondsToString(seconds) {
   var numhours = Math.floor(((seconds % 31536000) % 86400) / 3600);
   var numminutes = Math.floor((((seconds % 31536000) % 86400) % 3600) / 60);
   var numseconds = Math.floor((((seconds % 31536000) % 86400) % 3600) % 60);
+  if (numminutes == 0 && numhours == 0 && numdays == 0 && numyears == 0)
+    return numseconds + " seconds";
+  else if (numhours == 0 && numdays == 0 && numyears == 0)
+    return numminutes + " minutes " + numseconds + " seconds";
+  else if (numdays == 0 && numyears == 0)
+    return numhours + " hours " + numminutes + " minutes " + numseconds + " seconds";
+  else if (numyears == 0)
+    return numdays + " days " + numhours + " hours " + numminutes + " minutes " + numseconds + " seconds";
   return numyears + " years " +  numdays + " days " + numhours + " hours " + numminutes + " minutes " + numseconds + " seconds";
 }
 
@@ -41,13 +125,15 @@ var maxNumWindows = 0;
 //get the stored tabs
 chrome.storage.local.get(null, function(items){
 
-  //console.log(items);
   var timeStampsStrings = Object.keys(items).sort();
   var timeStamps = timeStampsStrings.map(function(x){
     return parseInt(x,10);
   });
-  var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
+
+  //var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
   
+  var timeStampRange = timeStamps;
+
   var startTime = timeStamps[0];
   var endTime = timeStamps[timeStamps.length -1];
 
@@ -55,9 +141,17 @@ chrome.storage.local.get(null, function(items){
   var windAmnt = [];
   var seshNums = [];
 
-  function getTabsinRange(timeStampRange){
-    var tabs = [];
+  var total = timeStamps.length*3;
+  var i = d3.scale.linear()
+    .domain([0, total])
+    .range([0,1]);
+
+  var tabs = [];
+  function getTabsinRange(timeStampRange,tabs){
+    //var tabs = [];
+
     for(var time in timeStampRange) {
+      //console.log(time);
       var timePiece = timeStamps[time];
       var numberOfTabs = 0;
       var numberOfWindows = 0;
@@ -67,10 +161,6 @@ chrome.storage.local.get(null, function(items){
         numberOfTabs += items[timeStamps[time]].windows[wind].length;
         for(var ind in items[timeStamps[time]].windows[wind]){
           var tab = items[timeStamps[time]].windows[wind][ind];
-          //console.log(tab);
-          //var sesh = items[timeStamps[time]].sessionId;
-          //console.log(sesh);
-          //seshNums.push(sesh);
           var tabIsAlive = _.find(tabs,function(t) {
             return t.tabId == tab.tabId && t.windowId == tab.windowId && t.sessionId == sesh;
           });
@@ -91,7 +181,17 @@ chrome.storage.local.get(null, function(items){
       seshNums.push(sesh);
       tabAmnt.push(numberOfTabs);
       windAmnt.push(numberOfWindows);
+     // d3.transition().tween("progress", function() {
+      //  return function(t) {
+          progress = i(time);
+          //console.log(progress);
+          foreground.attr("d", arc.endAngle(twoPi * progress));
+          text.text(formatPercent(progress));
+        //};
+      //});
+      setTimeout(getTabsinRange(timeStampRange,tabs),1000);
     }
+
 
     for (var tab in tabs){
       if (tabs[tab].died == -1){
@@ -99,12 +199,24 @@ chrome.storage.local.get(null, function(items){
           return num > tabs[tab].born;
         });
       }
+      //var i = d3.interpolate(progress, tab/total);
+      //d3.transition().tween("progress", function() {
+      //  return function(t) {
+       //   progress = i(tab);
+      //    foreground.attr("d", arc.endAngle(twoPi * progress));
+      //    text.text(formatPercent(progress));
+      //  };
+      //});
     }
-    return tabs;
+
+
+
+
+    //return tabs;
   }
 
 
-  var tabs = getTabsinRange(timeStampRange,tabs);
+  getTabsinRange(timeStampRange,tabs);
 
   var maxSesh = d3.max(seshNums);
   var maxSeshTime = timeStamps[seshNums.indexOf(maxSesh)];
@@ -112,8 +224,10 @@ chrome.storage.local.get(null, function(items){
   var maxNumTabs = d3.max(tabAmnt);
   var maxTabsTime = timeStamps[tabAmnt.indexOf(maxNumTabs)];
 
+
   maxNumWindows = d3.max(windAmnt);
   var maxWindTime = timeStamps[windAmnt.indexOf(maxNumWindows)];
+
 
 
   var tabLives = [];
@@ -127,10 +241,15 @@ chrome.storage.local.get(null, function(items){
         maxTabsInd.push(+tab);
   }
 
+  var avgTabLife = Math.round(d3.mean(tabLives));
+  var avgNumTabs = Math.round(d3.mean(tabAmnt));
+
 
 
   var oldestTab = d3.max(tabLives);
   var oldestTabIndex = tabLives.indexOf(oldestTab);
+
+  meter.transition().duration(2250).attr('opacity', 0);
 
   //console.log("maxSesh: " + maxSesh);
   //console.log("maxSeshTime: " + maxSeshTime);
@@ -140,13 +259,6 @@ chrome.storage.local.get(null, function(items){
   //console.log("maxWindTime " + maxWindTime);
   
   var barHeight = height/tabs.length;
-
-  svg.append("rect")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("fill", "whitesmoke")
-    .attr("stroke", "black")
-    .attr("stroke-width", 0.5);
 
   var x = d3.time.scale()
     .domain([startTime, endTime])
@@ -177,29 +289,17 @@ chrome.storage.local.get(null, function(items){
   svg.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + height + ")")
+    .attr('opacity',0)
+    .transition().duration(2000)
+      .attr('opacity',1)
     .call(xAxis);
 
   svg.append("g")
     .attr("class", "y axis")
+    .attr('opacity',0)
+    .transition().duration(2000)
+      .attr('opacity',1)
     .call(yAxis);
-
-  var colorScale = d3.scale.linear()
-    .domain([0, 1])
-    .range(["hsl(0,50%,50%)", "hsl(200,50%,50%)"])
-    .interpolate(d3.interpolateHsl);
-
-
-  var svg2 = d3.select("svg").append("svg")
-    .attr("x", margin.left)
-    .attr("y", margin.top)
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-
-
-  var svg3 = svg2.append("svg")
-    .attr("width", width)
-    .attr("height", height)
-    .attr("overflow", "hidden")
 
 
 var bar = svg3.selectAll("g")
@@ -232,24 +332,12 @@ var bar = svg3.selectAll("g")
     bar.transition().duration(1000)
       .attr('opacity',1);
 
-  
+
   svg.append("rect")
     .attr("class", "overlay")
     .attr("width", width)
     .attr("height", height)
     .call(zoom);
-
-  svg.append("text")
-    .attr("transform", "translate(" + -margin.left +"," + height/2 + ")")
-    .style("text-anchor", "start")
-    .style("font-weight", "bold")
-    .text("Tab");
-
-  svg.append("text")
-    .attr("transform", "translate(" + (width/2) + "," + (height + margin.bottom/2) + ")")
-    .style("text-anchor", "middle")
-    .style("font-weight", "bold")
-    .text("Time");
 
   var oldTabLabel = svg3.append("text")
     .attr("x", (width - 10) )
@@ -326,6 +414,19 @@ var bar = svg3.selectAll("g")
             .style("opacity", 1);
         });
 
+  var avgTabLabel = svg3.append("text")
+    .attr("x", 10 )
+    .attr("y", height - 20)
+    .style("text-anchor", "start")
+    .style("font", "15px Helvetica Neue")
+    .text("Average Tab Life: " + secondsToString(avgTabLife/1000));
+
+  var avgTabLabel = svg3.append("text")
+    .attr("x", 10 )
+    .attr("y", height - 20 - 15)
+    .style("text-anchor", "start")
+    .style("font", "15px Helvetica Neue")
+    .text("Average Number of Tabs Open: " + avgNumTabs);
 
   function draw() {
     svg.select("g.x.axis").call(xAxis);
