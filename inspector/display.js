@@ -1,10 +1,9 @@
 
-
 var margin = {top: 60, right: 60, bottom: 60, left: 60},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
 
-var svg = d3.select(".chart").append("svg")
+var svg = d3.select("body").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)
   .append("g")
@@ -39,19 +38,15 @@ function secondsToString(seconds) {
 
 var maxNumWindows = 0;
 
-
-
 //get the stored tabs
 chrome.storage.local.get(null, function(items){
 
-
-  console.log(items);
-  var timeStamps = Object.keys(items).sort();
-  timeStamps = timeStamps.map(function(x){
+  //console.log(items);
+  var timeStampsStrings = Object.keys(items).sort();
+  var timeStamps = timeStampsStrings.map(function(x){
     return parseInt(x,10);
   });
   var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
-
   
   var startTime = timeStamps[0];
   var endTime = timeStamps[timeStamps.length -1];
@@ -132,134 +127,34 @@ chrome.storage.local.get(null, function(items){
         maxTabsInd.push(+tab);
   }
 
-  console.log(maxTabsInd);
 
 
   var oldestTab = d3.max(tabLives);
   var oldestTabIndex = tabLives.indexOf(oldestTab);
 
-  console.log("maxSesh: " + maxSesh);
-  console.log("maxSeshTime: " + maxSeshTime);
-  console.log("maxTabs: " + maxNumTabs);
-  console.log("maxTabsTime: " + maxTabsTime);
-  console.log("maxWindows " + maxNumWindows);
-  console.log("maxWindTime " + maxWindTime);
+  //console.log("maxSesh: " + maxSesh);
+  //console.log("maxSeshTime: " + maxSeshTime);
+  //console.log("maxTabs: " + maxNumTabs);
+  //console.log("maxTabsTime: " + maxTabsTime);
+  //console.log("maxWindows " + maxNumWindows);
+  //console.log("maxWindTime " + maxWindTime);
   
   var barHeight = height/tabs.length;
-  
+
+  svg.append("rect")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("fill", "whitesmoke")
+    .attr("stroke", "black")
+    .attr("stroke-width", 0.5);
+
   var x = d3.time.scale()
     .domain([startTime, endTime])
-    .range([margin.left, width-margin.left]);
+    .range([0, width]);
 
   var y = d3.scale.linear()
     .domain([0, tabs.length])
-    .range([margin.top, height-margin.bottom]);
-
-  svg.append("rect")
-      .attr("width", width)
-      .attr("height", height)
-      .attr("fill", "whitesmoke")
-      .attr("stroke", "black")
-      .attr("stroke-width", 0.5);
-
-  var colorScale = d3.scale.linear()
-    .domain([0, 1])
-    .range(["hsl(0,50%,50%)", "hsl(200,50%,50%)"])
-    .interpolate(d3.interpolateHsl);
-
-
-  var bar = svg.selectAll("g")
-    .data(tabs)
-    .enter().append("g");
-
-
-  bar.append("rect")
-    .attr("transform", function(d,i) {
-      if(d.born == null){
-        console.log(d);
-      }
-
-      /*if (d.born == maxTabsTime){
-        //console.log("fuckit");
-        //console.log("translate(" + x(d.born) + "," + y(i) + ")");
-        bar.append("text")
-          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
-          .text("Most Tabs Open: " + maxNumTabs);
-      }
-      else if (d.born == maxWindTime){
-        //console.log("fuckit");
-        //console.log("translate(" + x(d.born) + "," + y(i) + ")");
-        bar.append("text")
-          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
-          .text("Most Windows Open: " + maxNumWindows);
-      }
-      else if (i == oldestTabIndex){
-        bar.append("text")
-          .attr("transform", "translate(" + x(d.born) + "," + y(i) + ")")
-          .text("Oldest Tab: " + secondsToString(oldestTab/1000));
-      }*/
-      return "translate(" + x(d.born) + "," + y(i) + ")";
-    })
-    .attr("width", function(d) {
-      if(isNaN(x(d.died) - x(d.born))){
-        console.log(d.died);
-        console.log(d.born);
-        var date = new Date().getTime();
-        var key = new String(date).valueOf();
-        console.log(typeof(key));
-        d.died = +key;
-      }
-      return x(d.died) - x(d.born);
-    })
-    .attr("height", 0.75*barHeight)
-    //.attr("rx", 0.5)
-    //.attr("ry", 0.5)
-    .style("fill", function(d){
-      var sesh = d.sessionId;
-      return colorScale(sesh);
-    });
-
-    bar.attr('opacity',0);
-    bar.transition().duration(1000)
-      .attr('opacity',1);
-
-
-  var zoom = d3.behavior.zoom()
-    .x(x)
-    .y(y)
-    .scaleExtent([1,80])
-    .on("zoom", draw);
-
-  svg.append("rect")
-      .attr("class", "overlay")
-      .attr("width", width)
-      .attr("height", height)
-      .call(zoom);
-
-  svg.append("rect")
-      .attr("width",width)
-      .attr("height", height)
-      .style("fill", "white")
-      .attr("transform", "translate(0," + height + ")");
-
-  svg.append("rect")
-      .attr("width",width)
-      .attr("height", height+ margin.top + margin.bottom)
-      .style("fill", "white")
-      .attr("transform", "translate(" + width +"," + -margin.top + ")");
-
-  svg.append("rect")
-    .attr("width",width)
-    .attr("height", margin.top)
-    .attr("transform", "translate(0," + -margin.top + ")")
-    .style("fill", "white");
-
-  svg.append("rect")
-    .attr("width",margin.left)
-    .attr("height", height + margin.top + margin.bottom)
-    .attr("transform", "translate(" + -margin.left + "," + -margin.top +")")
-    .style("fill", "white");
-
+    .range([0, height]);
 
   var xAxis = d3.svg.axis()
     .scale(x)
@@ -270,9 +165,15 @@ chrome.storage.local.get(null, function(items){
   var yAxis = d3.svg.axis()
     .scale(y)
     .orient("left")
-    .tickSize(-height, 0)
+    .tickSize(-width, 0)
     .tickPadding(6);
 
+  var zoom = d3.behavior.zoom()
+    .x(x)
+    .y(y)
+    .scaleExtent([1,80])
+    .on("zoom", draw);
+    
   svg.append("g")
     .attr("class", "x axis")
     .attr("transform", "translate(0," + height + ")")
@@ -281,6 +182,62 @@ chrome.storage.local.get(null, function(items){
   svg.append("g")
     .attr("class", "y axis")
     .call(yAxis);
+
+  var colorScale = d3.scale.linear()
+    .domain([0, 1])
+    .range(["hsl(0,50%,50%)", "hsl(200,50%,50%)"])
+    .interpolate(d3.interpolateHsl);
+
+
+  var svg2 = d3.select("svg").append("svg")
+    .attr("x", margin.left)
+    .attr("y", margin.top)
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+
+
+  var svg3 = svg2.append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("overflow", "hidden")
+
+
+var bar = svg3.selectAll("g")
+    .data(tabs)
+    .enter().append("g");
+
+
+  bar.append("rect")
+    .attr("transform", function(d,i) {
+      return "translate(" + x(d.born) + "," + y(i) + ")";
+    })
+    .attr("width", function(d) {
+      /*if(isNaN(x(d.died) - x(d.born))){
+        var date = new Date().getTime();
+        var key = new String(date).valueOf();
+        d.died = +key;
+      }*/
+      return x(d.died) - x(d.born);
+    })
+    .attr("height", 0.75*barHeight)
+    //.attr("rx", 0.5)
+    //.attr("ry", 0.5)
+    .style("fill", function(d){
+      var sesh = d.sessionId;
+      return colorScale(sesh);
+    })
+    .attr("overflow", "hidden");
+
+    bar.attr('opacity',0);
+    bar.transition().duration(1000)
+      .attr('opacity',1);
+
+  
+  svg.append("rect")
+    .attr("class", "overlay")
+    .attr("width", width)
+    .attr("height", height)
+    .call(zoom);
 
   svg.append("text")
     .attr("transform", "translate(" + -margin.left +"," + height/2 + ")")
@@ -294,7 +251,7 @@ chrome.storage.local.get(null, function(items){
     .style("font-weight", "bold")
     .text("Time");
 
-  var oldTabLabel = svg.append("text")
+  var oldTabLabel = svg3.append("text")
     .attr("x", (width - 10) )
     .attr("y", 20)
     .style("font", "15px Helvetica Neue")
@@ -303,9 +260,9 @@ chrome.storage.local.get(null, function(items){
 
   var oldTabBox = oldTabLabel.node().getBBox();
 
-  console.log(oldTabBox);
+  //console.log(oldTabBox);
 
-  var oldTabOverlay = svg.append("rect")
+  var oldTabOverlay = svg3.append("rect")
         .attr("class", "overlay")
         .attr("x", oldTabBox.x)
         .attr("y", oldTabBox.y)
@@ -319,7 +276,7 @@ chrome.storage.local.get(null, function(items){
               return d;
           });
           selectAgain.selectAll("rect")
-            .style("opacity", 0.25);
+            .style("opacity", 0.2);
         })
         .on("mouseout", function(){
           var data = tabs[oldestTabIndex];
@@ -333,7 +290,7 @@ chrome.storage.local.get(null, function(items){
         });
 
 
-  var mostTabsLabel = svg.append("text")
+  var mostTabsLabel = svg3.append("text")
     .attr("x", (width - 10) )
     .attr("y", 20+15)
     .style("font", "15px Helvetica Neue")
@@ -342,9 +299,9 @@ chrome.storage.local.get(null, function(items){
 
   var mostTabBox = mostTabsLabel.node().getBBox();
 
-  console.log(mostTabBox);
+  //console.log(mostTabBox);
 
-  var mostTabOverlay = svg.append("rect")
+  var mostTabOverlay = svg3.append("rect")
         .attr("class", "overlay")
         .attr("x", mostTabBox.x)
         .attr("y", mostTabBox.y)
@@ -357,7 +314,7 @@ chrome.storage.local.get(null, function(items){
               return d;
           });
           selectAgain.selectAll("rect")
-            .style("opacity", 0.25);
+            .style("opacity", 0.2);
         })
         .on("mouseout", function(){
           var select = bar[0][maxTabsInd];

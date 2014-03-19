@@ -1,6 +1,6 @@
 {
-  "name": "Tab Inspector",
-  "description": "Record the life of your tabs",
+  "name": "Tabbism",
+  "description": "Record the Lives of Your Tabs",
   "version": "0.3",
   "permissions": [
     "http://*/*", 
@@ -11,10 +11,10 @@
     ],
   "background": {
     "persistent": true,
-    "scripts": ["background.js", "d3.v3.min.js", "d3-tip.js"]
+    "scripts": ["background.js", "d3.v3.min.js"]
   },
   "browser_action": {
-    "default_title": "show tab inspector"
+    "default_title": "show tab visualization"
   },
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "manifest_version": 2
