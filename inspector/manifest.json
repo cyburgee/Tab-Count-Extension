@@ -1,7 +1,7 @@
 {
   "name": "Tabbism",
   "description": "Record the Lives of Your Tabs",
-  "version": "0.3",
+  "version": "0.5",
   "permissions": [
     "http://*/*", 
     "unlimitedStorage",
@@ -14,7 +14,7 @@
     "scripts": ["background.js", "d3.v3.min.js"]
   },
   "browser_action": {
-    "default_title": "show tab visualization"
+    "default_title": "Show Tab Visualization"
   },
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
   "manifest_version": 2

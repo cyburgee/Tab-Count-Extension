@@ -1,4 +1,3 @@
-
 var margin = {top: 60, right: 60, bottom: 60, left: 60},
     width = window.innerWidth - margin.left - margin.right,
     height = window.innerHeight - margin.top - margin.bottom;
@@ -18,12 +17,79 @@ var svg = d3.select("body").append("svg")
   .append("g")
   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+
+svg.append("text")
+  .attr("x", width/2)
+  .attr("y", -margin.top/2)
+  .style("font", "30px Helvetica")
+  .style("text-anchor", "middle")
+  .style("letter-spacing", "-1px")
+  .style("fill", "black")
+  .text("Tabs Rule Everything Around Me");
+/*d3.select("body").append("input")
+  .style("position", "absolute")
+  .style("left", width + "px")
+  .style("top", 0 + "px")
+  .attr("type", "button")
+  .attr("value", "Clear History");*/
+
+
+var clearHistorLabelUnder = svg.append("text")
+  .attr("x", width )
+  .attr("y", -15)
+  .style("font", "15px Helvetica Neue")
+  .style("font-weight","bold")
+  .style("text-anchor", "end")
+  .style("fill", "black")
+  .text("Clear History");
+
+var clearHistoryBox = clearHistorLabelUnder.node().getBBox();
+
+var clearHistoryBackground = svg.append("rect")
+  .attr("x", clearHistoryBox.x)
+  .attr("y", clearHistoryBox.y)
+  .attr("rx", 2)
+  .attr("ry", 2)
+  .attr("width", clearHistoryBox.width)
+  .attr("height", clearHistoryBox.height)
+  .style("fill","black")
+  .attr("opacity", 0);
+
+var clearHistoryLabel = svg.append("text")
+  .attr("x", width )
+  .attr("y", -15)
+  .style("font", "15px Helvetica Neue")
+  .style("font-weight","bold")
+  .style("text-anchor", "end")
+  .style("fill", "white")
+  .attr("opacity", 0)
+  .text("Clear History");
+
+var oldTabOverlay = svg.append("rect")
+  .attr("class", "overlay")
+  .attr("x", clearHistoryBox.x)
+  .attr("y", clearHistoryBox.y)
+  .attr("width", clearHistoryBox.width)
+  .attr("height", clearHistoryBox.height)
+  .style("cursor","pointer")
+  .on("mouseover", function() {
+    clearHistoryBackground.attr("opacity", 1);
+    clearHistoryLabel.attr("opacity", 1);
+  })
+  .on("mouseout", function(){
+    clearHistoryBackground.attr("opacity", 0);
+    clearHistoryLabel.attr("opacity", 0);
+  })
+  .on("click", function(){
+
+  });
+
 svg.append("rect")
   .attr("width", width)
   .attr("height", height)
   .attr("fill", "whitesmoke")
   .attr('opacity',0)
-  .transition().duration(250)
+  .transition().duration(500)
     .attr('opacity',1);
 
 svg.append("text")
@@ -62,28 +128,20 @@ var svg3 = svg2.append("svg")
   .attr("height", height)
   .attr("overflow", "hidden")
 
-/*var svgArc = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height)
-  .append("g")
-    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
-    */
 
-var meter = svg.append("g")
+
+var loading = svg.append("g")
     .attr("class", "progress-meter")
-    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
-    .attr('opacity', 1);
+    .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
 
-meter.append("path")
-    .attr("class", "background")
-    .attr("d", arc.endAngle(twoPi));
-
-var foreground = meter.append("path")
-    .attr("class", "foreground");
-
-var text = meter.append("text")
-    .attr("text-anchor", "middle")
-    .attr("dy", ".35em");
+var loadText = loading.append("text")
+  .style("text-anchor", "middle")
+  .style("font-weight", "bold")
+  .style("font", "15px Helvetica Neue")
+  .text("Loading...")
+  .attr('opacity',0)
+  .transition().duration(250)
+    .attr('opacity',1);
 
 var startTime = -1;
 var endTime = -1;
@@ -122,13 +180,14 @@ function secondsToString(seconds) {
 
 var maxNumWindows = 0;
 
-//get the stored tabs
-chrome.storage.local.get(null, function(items){
 
+chrome.storage.local.get(null, function(items){
+  console.log(items);
   var timeStampsStrings = Object.keys(items).sort();
   var timeStamps = timeStampsStrings.map(function(x){
     return parseInt(x,10);
   });
+
 
   //var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
   
@@ -142,11 +201,9 @@ chrome.storage.local.get(null, function(items){
   var seshNums = [];
 
   var total = timeStamps.length*3;
-  var i = d3.scale.linear()
-    .domain([0, total])
-    .range([0,1]);
 
   var tabs = [];
+
   function getTabsinRange(timeStampRange,tabs){
     //var tabs = [];
 
@@ -181,15 +238,6 @@ chrome.storage.local.get(null, function(items){
       seshNums.push(sesh);
       tabAmnt.push(numberOfTabs);
       windAmnt.push(numberOfWindows);
-     // d3.transition().tween("progress", function() {
-      //  return function(t) {
-          progress = i(time);
-          //console.log(progress);
-          foreground.attr("d", arc.endAngle(twoPi * progress));
-          text.text(formatPercent(progress));
-        //};
-      //});
-      setTimeout(getTabsinRange(timeStampRange,tabs),1000);
     }
 
 
@@ -199,18 +247,7 @@ chrome.storage.local.get(null, function(items){
           return num > tabs[tab].born;
         });
       }
-      //var i = d3.interpolate(progress, tab/total);
-      //d3.transition().tween("progress", function() {
-      //  return function(t) {
-       //   progress = i(tab);
-      //    foreground.attr("d", arc.endAngle(twoPi * progress));
-      //    text.text(formatPercent(progress));
-      //  };
-      //});
     }
-
-
-
 
     //return tabs;
   }
@@ -248,8 +285,6 @@ chrome.storage.local.get(null, function(items){
 
   var oldestTab = d3.max(tabLives);
   var oldestTabIndex = tabLives.indexOf(oldestTab);
-
-  meter.transition().duration(2250).attr('opacity', 0);
 
   //console.log("maxSesh: " + maxSesh);
   //console.log("maxSeshTime: " + maxSeshTime);
@@ -312,11 +347,11 @@ var bar = svg3.selectAll("g")
       return "translate(" + x(d.born) + "," + y(i) + ")";
     })
     .attr("width", function(d) {
-      /*if(isNaN(x(d.died) - x(d.born))){
+      if(isNaN(x(d.died) - x(d.born))){
         var date = new Date().getTime();
         var key = new String(date).valueOf();
         d.died = +key;
-      }*/
+      }
       return x(d.died) - x(d.born);
     })
     .attr("height", 0.75*barHeight)
@@ -333,69 +368,147 @@ var bar = svg3.selectAll("g")
       .attr('opacity',1);
 
 
-  svg.append("rect")
+  var avgLifeTabLabel = svg3.append("text")
+    .attr("x", 10 )
+    .attr("y", height - 20)
+    .style("text-anchor", "start")
+    .style("font", "15px Helvetica Neue")
+    .text("Average Tab Life: " + secondsToString(avgTabLife/1000))
+    //.attr('opacity',0)
+    //.transition().duration(1000)
+    //.attr('opacity',1);
+
+  var avgNumTabLabel = svg3.append("text")
+    .attr("x", 10 )
+    .attr("y", height - 20 - 15)
+    .style("text-anchor", "start")
+    .style("font", "15px Helvetica Neue")
+    .text("Average Number of Tabs Open: " + avgNumTabs)
+    //.attr('opacity',0)
+    //.transition().duration(1000)
+    //.attr('opacity',1);
+
+  svg3.append("rect")
     .attr("class", "overlay")
     .attr("width", width)
     .attr("height", height)
     .call(zoom);
+
+  var oldTabLabelUnder = svg3.append("text")
+    .attr("x", (width - 10) )
+    .attr("y", 20)
+    .style("font", "15px Helvetica Neue")
+    .style("font-weight","bold")
+    .style("fill", "black")
+    .text("Longest-Lived Tab: " + secondsToString(oldestTab/1000));
+
+  var oldTabBox = oldTabLabelUnder.node().getBBox();
+
+  //console.log(oldTabBox);
+  var oldTabBackground = svg3.append("rect")
+    .attr("x", oldTabBox.x)
+    .attr("y", oldTabBox.y)
+    .attr("rx", 2)
+    .attr("ry", 2)
+    .attr("width", oldTabBox.width)
+    .attr("height", oldTabBox.height)
+    .style("fill","black")
+    .attr("opacity", 0);
 
   var oldTabLabel = svg3.append("text")
     .attr("x", (width - 10) )
     .attr("y", 20)
     .style("font", "15px Helvetica Neue")
     .style("font-weight","bold")
+    .style("fill", "white")
+    .attr("opacity", 0)
     .text("Longest-Lived Tab: " + secondsToString(oldestTab/1000));
 
-  var oldTabBox = oldTabLabel.node().getBBox();
-
-  //console.log(oldTabBox);
-
-  var oldTabOverlay = svg3.append("rect")
-        .attr("class", "overlay")
-        .attr("x", oldTabBox.x)
-        .attr("y", oldTabBox.y)
-        .attr("width", oldTabBox.width)
-        .attr("height", oldTabBox.height)
-        .on("mouseover", function() {
-          var data = tabs[oldestTabIndex];
-          var select = bar[0][oldestTabIndex];
-          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
-            if (i != oldestTabIndex)
-              return d;
-          });
-          selectAgain.selectAll("rect")
-            .style("opacity", 0.2);
-        })
-        .on("mouseout", function(){
-          var data = tabs[oldestTabIndex];
-          var select = bar[0][oldestTabIndex];
-          var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
-            if (i != oldestTabIndex)
-              return d;
-          });
-          selectAgain.selectAll("rect")
-            .style("opacity", 1);
+   var oldTabOverlay = svg3.append("rect")
+      .attr("class", "overlay")
+      .attr("x", oldTabBox.x)
+      .attr("y", oldTabBox.y)
+      .attr("width", oldTabBox.width)
+      .attr("height", oldTabBox.height)
+      .style("cursor","pointer")
+      .on("mouseover", function() {
+        oldTabBackground.attr("opacity", 1);
+        oldTabLabel.attr("opacity", 1);
+        mostTabsLabelUnder.attr("opacity", 0.2);
+        avgLifeTabLabel.attr("opacity",0.2);
+        avgNumTabLabel.attr("opacity", 0.2);
+        var data = tabs[oldestTabIndex];
+        var select = bar[0][oldestTabIndex];
+        var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+          if (i != oldestTabIndex)
+            return d;
         });
+        selectAgain.selectAll("rect")
+          .style("opacity", 0.2);
+      })
+      .on("mouseout", function(){
+        mostTabsLabelUnder.attr("opacity", 1);
+        avgLifeTabLabel.attr("opacity",1);
+        avgNumTabLabel.attr("opacity", 1);
+        oldTabBackground.attr("opacity", 0);
+        oldTabLabel.attr("opacity", 0);
+        var data = tabs[oldestTabIndex];
+        var select = bar[0][oldestTabIndex];
+        var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
+          if (i != oldestTabIndex)
+            return d;
+        });
+        selectAgain.selectAll("rect")
+          .style("opacity", 1);
+      });
 
 
-  var mostTabsLabel = svg3.append("text")
+  var mostTabsLabelUnder = svg3.append("text")
     .attr("x", (width - 10) )
-    .attr("y", 20+15)
+    .attr("y", 20+20)
     .style("font", "15px Helvetica Neue")
     .style("font-weight","bold")
-    .text("Most Tabs Open: " + maxNumTabs);
+    .style("fill", "black")
+    .text("Most Tabs Open: " + maxNumTabs)
 
-  var mostTabBox = mostTabsLabel.node().getBBox();
+
+  var mostTabBox = mostTabsLabelUnder.node().getBBox();
 
   //console.log(mostTabBox);
 
-  var mostTabOverlay = svg3.append("rect")
+  var mostTabBackground = svg3.append("rect")
         .attr("class", "overlay")
         .attr("x", mostTabBox.x)
         .attr("y", mostTabBox.y)
         .attr("width", mostTabBox.width)
         .attr("height", mostTabBox.height)
+        .attr("rx", 2)
+        .attr("ry", 2)
+        .style("fill", "black")
+        .attr("opacity", 0);
+
+    var mostTabsLabel = svg3.append("text")
+      .attr("x", (width - 10) )
+      .attr("y", 20+20)
+      .style("font", "15px Helvetica Neue")
+      .style("font-weight","bold")
+      .style("fill", "white")
+      .text("Most Tabs Open: " + maxNumTabs)
+      .attr("opacity", 0);
+
+    var mostTabOverlay = svg3.append("rect")
+        .attr("class", "overlay")
+        .attr("x", mostTabBox.x)
+        .attr("y", mostTabBox.y)
+        .attr("width", mostTabBox.width)
+        .attr("height", mostTabBox.height)
+        .style("cursor","pointer")
         .on("mouseover", function() {
+          mostTabBackground.attr("opacity", 1);
+          mostTabsLabel.attr("opacity", 1);
+          oldTabLabelUnder.attr("opacity", 0.2);
+          avgLifeTabLabel.attr("opacity",0.2);
+          avgNumTabLabel.attr("opacity", 0.2);
           var select = bar[0][maxTabsInd];
           var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
             if (maxTabsInd.indexOf(i) < 0)
@@ -405,6 +518,11 @@ var bar = svg3.selectAll("g")
             .style("opacity", 0.2);
         })
         .on("mouseout", function(){
+          oldTabLabelUnder.attr("opacity", 1);
+          avgLifeTabLabel.attr("opacity",1);
+          avgNumTabLabel.attr("opacity", 1);
+          mostTabBackground.attr("opacity", 0);
+          mostTabsLabel.attr("opacity", 0);
           var select = bar[0][maxTabsInd];
           var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
             if (maxTabsInd.indexOf(i) < 0)
@@ -414,19 +532,8 @@ var bar = svg3.selectAll("g")
             .style("opacity", 1);
         });
 
-  var avgTabLabel = svg3.append("text")
-    .attr("x", 10 )
-    .attr("y", height - 20)
-    .style("text-anchor", "start")
-    .style("font", "15px Helvetica Neue")
-    .text("Average Tab Life: " + secondsToString(avgTabLife/1000));
 
-  var avgTabLabel = svg3.append("text")
-    .attr("x", 10 )
-    .attr("y", height - 20 - 15)
-    .style("text-anchor", "start")
-    .style("font", "15px Helvetica Neue")
-    .text("Average Number of Tabs Open: " + avgNumTabs);
+ loading.remove();
 
   function draw() {
     svg.select("g.x.axis").call(xAxis);
