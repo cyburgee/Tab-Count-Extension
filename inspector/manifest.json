@@ -1,10 +1,9 @@
 {
-  "name": "Tabbism",
+  "name": "Tab Copy",
   "description": "Record the Lives of Your Tabs",
   "version": "0.5",
   "permissions": [
     "http://*/*", 
-    "unlimitedStorage",
     "storage",
     "tabs",
     "alarms"
