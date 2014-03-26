@@ -79,9 +79,6 @@ var oldTabOverlay = svg.append("rect")
   .on("mouseout", function(){
     clearHistoryBackground.attr("opacity", 0);
     clearHistoryLabel.attr("opacity", 0);
-  })
-  .on("click", function(){
-
   });
 
 svg.append("rect")
