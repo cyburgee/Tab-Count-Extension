@@ -128,7 +128,7 @@ var maxNumWindows = 0;
 
 function doThangs() {
   chrome.storage.local.get(null, function(items){
-    console.log(items);
+    ////console.log(items);
     var timeStampsStrings = Object.keys(items).sort();
     var timeStamps = timeStampsStrings.map(function(x){
       return parseInt(x,10);
@@ -153,7 +153,7 @@ function doThangs() {
       //var tabs = [];
 
       for(var time in timeStampRange) {
-        //console.log(time);
+        ////console.log(time);
         var timePiece = timeStamps[time];
         var numberOfTabs = 0;
         var numberOfWindows = 0;
@@ -207,9 +207,9 @@ function doThangs() {
     var maxSeshTime = timeStamps[seshNums.indexOf(maxSesh)];
 
     var maxNumTabs = d3.max(tabAmnt);
-    console.log(tabAmnt);
+    //console.log(tabAmnt);
     var maxTabsTime = timeStamps[tabAmnt.indexOf(maxNumTabs)];
-    console.log(maxTabsTime);
+    //console.log(maxTabsTime);
 
     maxNumWindows = d3.max(windAmnt);
     var maxWindTime = timeStamps[windAmnt.indexOf(maxNumWindows)];
@@ -232,7 +232,7 @@ function doThangs() {
           maxTabsInd.push(+tab);
     }
 
-    console.log(maxTabsInd);
+    //console.log(maxTabsInd);
     var avgTabLife = Math.round(d3.mean(tabLives));
     var avgNumTabs = Math.round(d3.mean(tabAmnt));
 
@@ -248,20 +248,20 @@ function doThangs() {
       maxNumTabs = 0;
     }
 
-    //console.log("maxSesh: " + maxSesh);
-    //console.log("maxSeshTime: " + maxSeshTime);
-    //console.log("maxTabs: " + maxNumTabs);
-    //console.log("maxTabsTime: " + maxTabsTime);
-    //console.log("maxWindows " + maxNumWindows);
-    //console.log("maxWindTime " + maxWindTime);
+    ////console.log("maxSesh: " + maxSesh);
+    ////console.log("maxSeshTime: " + maxSeshTime);
+    ////console.log("maxTabs: " + maxNumTabs);
+    ////console.log("maxTabsTime: " + maxTabsTime);
+    ////console.log("maxWindows " + maxNumWindows);
+    ////console.log("maxWindTime " + maxWindTime);
     
     var barHeight = height/tabs.length;
 
     //var date = new Date().getTime();
     //var now = new String(date).valueOf();
 
-  //console.log(startTime);
-  //console.log(now);
+  ////console.log(startTime);
+  ////console.log(now);
     var x = d3.time.scale()
       .domain([startTime, now + 1])
       //.domain([startTime, new Date().getTime()])
@@ -281,7 +281,9 @@ function doThangs() {
       .scale(y)
       .orient("left")
       .tickSize(-width, 0)
-      .tickPadding(6);
+      .tickPadding(6)
+      .tickFormat(d3.format("d"))
+      .tickSubdivide(0);
 
     var zoom = d3.behavior.zoom()
       .x(x)
@@ -304,7 +306,7 @@ function doThangs() {
         .attr('opacity',1)
       .call(yAxis);
 
-  console.log(tabs);
+  //console.log(tabs);
 
   var bar = svg3.selectAll("g")
       .data(tabs)
@@ -374,7 +376,7 @@ function doThangs() {
 
   var oldTabBox = oldTabLabelUnder.node().getBBox();
 
-  //console.log(oldTabBox);
+  ////console.log(oldTabBox);
   var oldTabBackground = svg3.append("rect")
     .attr("x", oldTabBox.x)
     .attr("y", oldTabBox.y)
@@ -445,7 +447,7 @@ function doThangs() {
 
   var mostTabBox = mostTabsLabelUnder.node().getBBox();
 
-  //console.log(mostTabBox);
+  ////console.log(mostTabBox);
 
   var mostTabBackground = svg3.append("rect")
     .attr("class", "overlay")
@@ -595,12 +597,12 @@ function clearOldHistory(){
 function saveData() {
   var session = chrome.extension.getBackgroundPage().session;
     chrome.windows.getAll({"populate" : true}, function(wins) {
-      //console.log("sesh:" + session);
+      ////console.log("sesh:" + session);
       var json = { sessionId: session,
         windows : []};
       for (var i = 0; i < wins.length; i++) {
         var tabsArr = [];
-        //console.log("session: " + wins[i].sessionId);
+        ////console.log("session: " + wins[i].sessionId);
         for(var j = 0; j < wins[i].tabs.length; j++){
           var tab = wins[i].tabs[j];
           var tabson= {};
@@ -616,19 +618,19 @@ function saveData() {
           //tabsArr.push(wins[i].tabs[j].id);
         }
         json.windows.push(tabsArr);
-        //console.log(json.windows);
+        ////console.log(json.windows);
       }  
       //var date = new Date().getTime();
       //var key = new String(date).valueOf();
-      //console.log(typeof(time));
+      ////console.log(typeof(time));
       key = now;
       var data = {};
-      //console.log(json);
+      ////console.log(json);
       data[key] = json;
-      //console.log(data);
+      ////console.log(data);
 
       chrome.storage.local.set(data,function(){
-        console.log(chrome.runtime.lastError);
+        //console.log(chrome.runtime.lastError);
         if (typeof chrome.runtime.lastError === 'undefined')
           doThangs();
         else{
