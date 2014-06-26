@@ -14,6 +14,16 @@ chrome.runtime.onStartup.addListener(function(){
   //console.log("sesh:" + session);
 });
 
+function clearOldHistory(){
+  chrome.storage.local.getBytesInUse(null,function(bytes){
+    console.log(bytes);
+    chrome.storage.local.get(null, function(items){
+      var timeStampsStrings = Object.keys(items).sort();
+      chrome.storage.local.remove(timeStampsStrings.slice(0,10));
+    });
+  });
+}
+
 function saveData() {
   if(listenerEnable){
   	chrome.windows.getAll({"populate" : true}, function(wins) {
@@ -40,7 +50,17 @@ function saveData() {
       var key = new String(date).valueOf();
       var data = {};
       data[key] = json;
-      chrome.storage.local.set(data);
+      chrome.storage.local.set(data,function(){
+        //console.log(chrome.runtime.lastError);
+        if (typeof chrome.runtime.lastError === 'undefined'){
+          console.log(chrome.runtime.lastError);
+        }
+        else {
+          clearOldHistory();
+          saveData();
+        }
+      });
+
     });
   }
 }

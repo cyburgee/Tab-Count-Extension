@@ -275,7 +275,7 @@ function doThangs() {
       .scale(x)
       .orient("bottom")
       .tickSize(-height, 0)
-      .tickPadding(6);
+      .tickPadding(10);
 
     var yAxis = d3.svg.axis()
       .scale(y)
@@ -288,7 +288,7 @@ function doThangs() {
     var zoom = d3.behavior.zoom()
       .x(x)
       .y(y)
-      .scaleExtent([1,80])
+      .scaleExtent([1,tabs.length/20])
       .on("zoom", draw);
       
     svg.append("g")
@@ -326,7 +326,7 @@ function doThangs() {
       }
       return x(d.died) - x(d.born);
     })
-    .attr("height", 0.75*barHeight)
+    .attr("height", 0.9*barHeight)
     //.attr("rx", 0.5)
     //.attr("ry", 0.5)
     .style("fill", function(d){
@@ -345,6 +345,7 @@ function doThangs() {
     .attr("y", height - 20)
     .style("text-anchor", "start")
     .style("font", "15px Helvetica Neue")
+    .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Average Tab Life: " + secondsToString(avgTabLife/1000))
     //.attr('opacity',0)
     //.transition().duration(1000)
@@ -355,6 +356,7 @@ function doThangs() {
     .attr("y", height - 20 - 15)
     .style("text-anchor", "start")
     .style("font", "15px Helvetica Neue")
+    .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Average Number of Tabs Open: " + avgNumTabs)
     //.attr('opacity',0)
     //.transition().duration(1000)
@@ -372,6 +374,7 @@ function doThangs() {
     .style("font", "15px Helvetica Neue")
     .style("font-weight","bold")
     .style("fill", "black")
+    .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Longest-Lived Tab: " + secondsToString(oldestTab/1000));
 
   var oldTabBox = oldTabLabelUnder.node().getBBox();
@@ -385,7 +388,6 @@ function doThangs() {
     .attr("width", oldTabBox.width)
     .attr("height", oldTabBox.height)
     .style("fill","black")
-    .style("text-shadow", "2px 0 0 #fff, -2px 0 0 #fff, 0 2px 0 #fff, 0 -2px 0 #fff, 1px 1px #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff")
     .attr("opacity", 0);
 
   var oldTabLabel = svg3.append("text")
@@ -411,7 +413,13 @@ function doThangs() {
         avgLifeTabLabel.attr("opacity",0.2);
         avgNumTabLabel.attr("opacity", 0.2);
         var data = tabs[oldestTabIndex];
-        var select = bar[0][oldestTabIndex];
+        var selection = d3.selectAll(bar[0]).filter(function(d,i){
+          if (i == oldestTabIndex)
+            return d;
+        });
+        selection.selectAll("rect")
+          .style("stroke-width", barHeight*0.1)
+          .style("stroke", "black");
         var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
           if (i != oldestTabIndex)
             return d;
@@ -426,7 +434,12 @@ function doThangs() {
         oldTabBackground.attr("opacity", 0);
         oldTabLabel.attr("opacity", 0);
         var data = tabs[oldestTabIndex];
-        var select = bar[0][oldestTabIndex];
+        var selection = d3.selectAll(bar[0]).filter(function(d,i){
+          if (i == oldestTabIndex)
+            return d;
+        });
+        selection.selectAll("rect")
+          .style("stroke-width", 0)
         var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
           if (i != oldestTabIndex)
             return d;
@@ -442,6 +455,7 @@ function doThangs() {
     .style("font", "15px Helvetica Neue")
     .style("font-weight","bold")
     .style("fill", "black")
+    .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Most Tabs Open: " + maxNumTabs)
 
 
@@ -482,7 +496,14 @@ function doThangs() {
       oldTabLabelUnder.attr("opacity", 0.2);
       avgLifeTabLabel.attr("opacity",0.2);
       avgNumTabLabel.attr("opacity", 0.2);
-      var select = bar[0][maxTabsInd];
+      //var select = bar[0][maxTabsInd];
+      var selection = d3.selectAll(bar[0]).filter(function(d,i){
+          if (maxTabsInd.indexOf(i) >= 0)
+            return d;
+      });
+      selection.selectAll("rect")
+        .style("stroke-width", barHeight*0.1)
+        .style("stroke", "black");
       var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
         if (maxTabsInd.indexOf(i) < 0)
           return d;
@@ -496,7 +517,13 @@ function doThangs() {
       avgNumTabLabel.attr("opacity", 1);
       mostTabBackground.attr("opacity", 0);
       mostTabsLabel.attr("opacity", 0);
-      var select = bar[0][maxTabsInd];
+      //var select = bar[0][maxTabsInd];
+      var selection = d3.selectAll(bar[0]).filter(function(d,i){
+          if (maxTabsInd.indexOf(i) >= 0)
+            return d;
+      });
+      selection.selectAll("rect")
+        .style("stroke-width", 0);
       var selectAgain = d3.selectAll(bar[0]).filter(function(d,i){
         if (maxTabsInd.indexOf(i) < 0)
           return d;
