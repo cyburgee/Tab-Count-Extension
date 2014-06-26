@@ -12,7 +12,6 @@ var arc = d3.svg.arc()
     .innerRadius(180)
     .outerRadius(240);
 
-
 var svg = d3.select("body").append("svg")
   .attr("width", width + margin.left + margin.right)
   .attr("height", height + margin.top + margin.bottom)
@@ -35,7 +34,7 @@ svg.append("rect")
   .attr("fill", "whitesmoke")
   .attr('opacity',0)
   .transition().duration(500)
-    .attr('opacity',1);
+  .attr('opacity',1);
 
 svg.append("text")
   .attr("transform", "translate(" + -margin.left +"," + height/2 + ")")
@@ -73,7 +72,17 @@ var svg3 = svg2.append("svg")
   .attr("height", height)
   .attr("overflow", "hidden")
 
+var svg4 = d3.select("svg").append("svg")
+  .attr("width", width + margin.right)
+  .attr("height", height + margin.bottom)
+  .append("g")
+  .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+var infoOverlayRect;
+
+var infoTextBox;
+
+var infoShown = false;
 
 var loading = svg.append("g")
     .attr("class", "progress-meter")
@@ -133,8 +142,6 @@ function doThangs() {
     var timeStamps = timeStampsStrings.map(function(x){
       return parseInt(x,10);
     });
-
-    //var timeStampRange = getTabRange(0,timeStamps[timeStamps.length-1],timeStamps);
     
     var timeStampRange = timeStamps;
 
@@ -150,10 +157,8 @@ function doThangs() {
     var tabs = [];
 
     function getTabsinRange(timeStampRange,tabs){
-      //var tabs = [];
 
       for(var time in timeStampRange) {
-        ////console.log(time);
         var timePiece = timeStamps[time];
         var numberOfTabs = 0;
         var numberOfWindows = 0;
@@ -188,16 +193,11 @@ function doThangs() {
 
       for (var tab in tabs){
         if (tabs[tab].died == -1){
-
-          //tabs[tab].died = new Date().getTime();
-          //tabs[tab].died = now + 1;
           tabs[tab].died = _.find(timeStamps, function(num) {
             return num > tabs[tab].born;
           });
         }
       }
-
-      //return tabs;
     }
 
 
@@ -207,9 +207,8 @@ function doThangs() {
     var maxSeshTime = timeStamps[seshNums.indexOf(maxSesh)];
 
     var maxNumTabs = d3.max(tabAmnt);
-    //console.log(tabAmnt);
+
     var maxTabsTime = timeStamps[tabAmnt.indexOf(maxNumTabs)];
-    //console.log(maxTabsTime);
 
     maxNumWindows = d3.max(windAmnt);
     var maxWindTime = timeStamps[windAmnt.indexOf(maxNumWindows)];
@@ -220,11 +219,6 @@ function doThangs() {
     var maxWindInd = [];
     var maxTabsInd = [];
     for(var tab in tabs ){
-      //if(isNaN(tabs[tab].died - tabs[tab].born)){
-          //var date = new Date().getTime();
-          //var key = new String(date).valueOf();
-        //  tabs[tab].died = now;
-       // }
         tabLives.push(tabs[tab].died - tabs[tab].born);
         if (tabs[tab].born <= maxWindTime && tabs[tab].died >= maxWindTime)
           maxWindInd.push(tab);
@@ -232,14 +226,19 @@ function doThangs() {
           maxTabsInd.push(+tab);
     }
 
-    //console.log(maxTabsInd);
     var avgTabLife = Math.round(d3.mean(tabLives));
+    if (isNaN(avgTabLife))
+      avgTabLife = 0;
     var avgNumTabs = Math.round(d3.mean(tabAmnt));
-
-
+    if (isNaN(avgNumTabs))
+      avgNumTabs = 0;
 
     var oldestTab = d3.max(tabLives);
-    var oldestTabIndex = tabLives.indexOf(oldestTab);
+    var oldestTabIndex = 0;
+     if (isNaN(oldestTab))
+      oldestTab = 0;
+    else
+      oldestTabIndex = tabLives.indexOf(oldestTab);
 
     if (timeStampsStrings.length == 0){
       avgTabLife = 0;
@@ -257,18 +256,12 @@ function doThangs() {
     
     var barHeight = height/tabs.length;
 
-    //var date = new Date().getTime();
-    //var now = new String(date).valueOf();
-
-  ////console.log(startTime);
-  ////console.log(now);
     var x = d3.time.scale()
       .domain([startTime, now + 1])
-      //.domain([startTime, new Date().getTime()])
       .range([0, width]);
 
     var y = d3.scale.linear()
-      .domain([0, tabs.length])
+      .domain([1, tabs.length+1])
       .range([0, height]);
 
     var xAxis = d3.svg.axis()
@@ -306,8 +299,6 @@ function doThangs() {
         .attr('opacity',1)
       .call(yAxis);
 
-  //console.log(tabs);
-
   var bar = svg3.selectAll("g")
       .data(tabs)
       .enter().append("g");
@@ -315,20 +306,15 @@ function doThangs() {
 
   bar.append("rect")
     .attr("transform", function(d,i) {
-      return "translate(" + x(d.born) + "," + y(i) + ")";
+      return "translate(" + x(d.born) + "," + y(i+1) + ")";
     })
     .attr("width", function(d) {
       if(isNaN(x(d.died) - x(d.born))){
-        //var date = new Date().getTime();
-        //var key = new String(date).valueOf();
-        //d.died = +key;
         d.died = now;
       }
       return x(d.died) - x(d.born);
     })
     .attr("height", 0.9*barHeight)
-    //.attr("rx", 0.5)
-    //.attr("ry", 0.5)
     .style("fill", function(d){
       var sesh = d.sessionId;
       return colorScale(sesh);
@@ -347,9 +333,6 @@ function doThangs() {
     .style("font", "15px Helvetica Neue")
     .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Average Tab Life: " + secondsToString(avgTabLife/1000))
-    //.attr('opacity',0)
-    //.transition().duration(1000)
-    //.attr('opacity',1);
 
   var avgNumTabLabel = svg3.append("text")
     .attr("x", 10 )
@@ -358,9 +341,6 @@ function doThangs() {
     .style("font", "15px Helvetica Neue")
     .style("text-shadow", "2px 0 0 white, -2px 0 0 white, 0 2px 0 white, 0 -2px 0 white, 1px 1px white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white")
     .text("Average Number of Tabs Open: " + avgNumTabs)
-    //.attr('opacity',0)
-    //.transition().duration(1000)
-    //.attr('opacity',1);
 
   svg3.append("rect")
     .attr("class", "overlay")
@@ -379,7 +359,6 @@ function doThangs() {
 
   var oldTabBox = oldTabLabelUnder.node().getBBox();
 
-  ////console.log(oldTabBox);
   var oldTabBackground = svg3.append("rect")
     .attr("x", oldTabBox.x)
     .attr("y", oldTabBox.y)
@@ -461,8 +440,6 @@ function doThangs() {
 
   var mostTabBox = mostTabsLabelUnder.node().getBBox();
 
-  ////console.log(mostTabBox);
-
   var mostTabBackground = svg3.append("rect")
     .attr("class", "overlay")
     .attr("x", mostTabBox.x)
@@ -496,7 +473,6 @@ function doThangs() {
       oldTabLabelUnder.attr("opacity", 0.2);
       avgLifeTabLabel.attr("opacity",0.2);
       avgNumTabLabel.attr("opacity", 0.2);
-      //var select = bar[0][maxTabsInd];
       var selection = d3.selectAll(bar[0]).filter(function(d,i){
           if (maxTabsInd.indexOf(i) >= 0)
             return d;
@@ -517,7 +493,6 @@ function doThangs() {
       avgNumTabLabel.attr("opacity", 1);
       mostTabBackground.attr("opacity", 0);
       mostTabsLabel.attr("opacity", 0);
-      //var select = bar[0][maxTabsInd];
       var selection = d3.selectAll(bar[0]).filter(function(d,i){
           if (maxTabsInd.indexOf(i) >= 0)
             return d;
@@ -531,6 +506,110 @@ function doThangs() {
       selectAgain.selectAll("rect")
         .style("opacity", 1);
       });
+
+  var infoLabelUnder = svg.append("text")
+  .attr("x", margin.left )
+  .attr("y", -15)
+  .style("font", "15px Helvetica Neue")
+  .style("font-weight","bold")
+  .style("text-anchor", "begin")
+  .style("fill", "black")
+  .text("Info");
+
+
+  var infoBox = infoLabelUnder.node().getBBox();
+
+  var infoBackground = svg.append("rect")
+    .attr("x", infoBox.x)
+    .attr("y", infoBox.y)
+    .attr("rx", 2)
+    .attr("ry", 2)
+    .attr("width", infoBox.width)
+    .attr("height", infoBox.height)
+    .style("fill","black")
+    .attr("opacity", 0);
+
+
+  var infoLabel = svg.append("text")
+    .attr("x", margin.left)
+    .attr("y", -15)
+    .style("font", "15px Helvetica Neue")
+    .style("font-weight","bold")
+    .style("text-anchor", "begin")
+    .style("fill", "white")
+    .attr("opacity", 0)
+    .text("Info");
+
+
+  var infoOverlay = svg.append("rect")
+    .attr("class", "overlay")
+    .attr("x", infoBox.x)
+    .attr("y", infoBox.y)
+    .attr("width", infoBox.width)
+    .attr("height", infoBox.height)
+    .style("cursor","pointer")
+    .on("mouseover", function() {
+      infoBackground.attr("opacity", 1);
+      infoLabel.attr("opacity", 1);
+    })
+    .on("mouseout", function(){
+      infoBackground.attr("opacity", 0);
+      infoLabel.attr("opacity", 0);
+    })
+    .on("click", function(){
+      var infoText1 = '\'Tabs Rule Everything Around Me\' is a Google Chrome browser extension that records and visualizes the lives and deaths of the users\' tabs, providing a new tool to analyze Internet browsing style.';
+      var infoText2 =  'Each colored bar represents a tab that was opened in Chrome, displayed in descending order of creation. Each color represents a single browsing session.';
+      var infoText3 = 'Scroll to zoom into the visualization as well as click and drag to investigate in greater detail how you use your tabs.';
+      var infoText4 = '';
+      var infoText5 = 'Click \'Info\' to return to the visualization.';
+      var infoText6 = 'This Chrome Extension was created by Collin Burger (http://thisiscoll.in) with the help of the d3 Javascript library (http://www.d3js.org).'
+      var textArr = [infoText1, infoText2, infoText3, infoText4, infoText5, infoText4, infoText4, infoText6];
+
+      if (infoShown){
+        infoShown = false;
+        svg4.selectAll('rect').transition().duration(500)
+          .attr('opacity',0)
+          .remove();
+
+        //var boxInfo = infoTextBox[0];
+        svg4.selectAll('text').transition().duration(500)
+          .attr('opacity',0)
+          .remove();
+
+        svg4.selectAll('br').remove();
+      }
+      else{
+        infoShown = true;
+        infoOverlayRect = svg4.append("rect")
+          .attr("width", "100%")
+          .attr("height", "100%")
+          .style("fill", "gray")
+          .attr('opacity',0)
+          .transition().duration(500)
+          .attr('opacity',0.5);
+
+        for (var i = 0; i < textArr.length; i++){
+          svg4.append("text")
+            .attr("width",width)
+            .attr("x", width/2)
+            .attr("y", height/2 + 15*i)
+            .text(textArr[i])
+            .style("font", "15px Helvetica Neue")
+            .style("text-anchor", "middle")
+            //.style("text-align", "center")
+            .style("fill", "white")
+            .attr('opacity',0)
+            .transition().duration(500)
+            .attr('opacity',1);
+
+          svg4.append('br');
+        }
+
+      }
+
+
+      console.log("clicked Info");
+    });
 
   var clearHistoryLabelUnder = svg.append("text")
     .attr("x", width )
@@ -583,8 +662,8 @@ function doThangs() {
       chrome.extension.getBackgroundPage().session = 0;
       tabs = [];
       d3.selectAll(bar[0]).remove();
-      avgLifeTabLabel.text("Average Number of Tabs Open: 0");
-      avgNumTabLabel.text("0 seconds");
+      avgLifeTabLabel.text("Average Tab Life: 0");
+      avgNumTabLabel.text("Average Number of Tabs Open: 0");
       oldTabLabelUnder.text("Longest-Lived Tab: 0 seconds");
       oldTabLabel.text("Longest-Lived Tab: 0 seconds");
       mostTabsLabelUnder.text("Most Tabs Open: 0");
@@ -608,28 +687,20 @@ function doThangs() {
 
 
 function clearOldHistory(){
-  chrome.storage.local.getBytesInUse(null,function(bytes){
-      console.log(bytes);
-      if (bytes >= 5000000) {
         chrome.storage.local.get(null, function(items){
           var timeStampsStrings = Object.keys(items).sort();
           chrome.storage.local.remove(timeStampsStrings.slice(0,10));
         });
-        clearOldHistory();
-      }
-  });
 }
 
 
 function saveData() {
   var session = chrome.extension.getBackgroundPage().session;
     chrome.windows.getAll({"populate" : true}, function(wins) {
-      ////console.log("sesh:" + session);
       var json = { sessionId: session,
         windows : []};
       for (var i = 0; i < wins.length; i++) {
         var tabsArr = [];
-        ////console.log("session: " + wins[i].sessionId);
         for(var j = 0; j < wins[i].tabs.length; j++){
           var tab = wins[i].tabs[j];
           var tabson= {};
@@ -640,24 +711,14 @@ function saveData() {
           tabson.highlight = tab.highlighted;
           tabson.pin = tab.pinned;
           tabson.ind = tab.index;
-          //json.windows.push(tabson);
           tabsArr.push(tabson);
-          //tabsArr.push(wins[i].tabs[j].id);
         }
         json.windows.push(tabsArr);
-        ////console.log(json.windows);
       }  
-      //var date = new Date().getTime();
-      //var key = new String(date).valueOf();
-      ////console.log(typeof(time));
       key = now;
       var data = {};
-      ////console.log(json);
       data[key] = json;
-      ////console.log(data);
-
       chrome.storage.local.set(data,function(){
-        //console.log(chrome.runtime.lastError);
         if (typeof chrome.runtime.lastError === 'undefined')
           doThangs();
         else{
@@ -668,5 +729,4 @@ function saveData() {
     });
 }
 
-clearOldHistory();
 saveData();

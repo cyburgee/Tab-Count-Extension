@@ -1,18 +1,31 @@
 var session = 0;
 var listenerEnable = false;
 
-chrome.runtime.onStartup.addListener(function(){
-  console.log("startup");
-  chrome.storage.local.get(null, function(items){
-    if (Object.keys(items).length > 0){
-      var highestInd = Object.keys(items).sort().pop();
-      session = items[highestInd].sessionId + 1;
-      //console.log("sesh:" + session);
+chrome.runtime.onInstalled.addListener(function(details){
+    if(details.reason == "install"){
+        console.log("This is a first install!");
+        session = 0;
+
+    }else if(details.reason == "update"){
+        //var thisVersion = chrome.runtime.getManifest().version;
+        //console.log("Updated from " + details.previousVersion + " to " + thisVersion + "!");
     }
-    listenerEnable = true;
-  });
-  //console.log("sesh:" + session);
 });
+
+//chrome.runtime.onStartup.addListener(function(){
+
+
+console.log("startup");
+chrome.storage.local.get(null, function(items){
+  if (Object.keys(items).length > 0){
+    var highestInd = Object.keys(items).sort().pop();
+    session = items[highestInd].sessionId + 1;
+    //console.log("sesh:" + session);
+  }
+  listenerEnable = true;
+});
+  //console.log("sesh:" + session);
+//});
 
 function clearOldHistory(){
   chrome.storage.local.getBytesInUse(null,function(bytes){
@@ -51,11 +64,12 @@ function saveData() {
       var data = {};
       data[key] = json;
       chrome.storage.local.set(data,function(){
-        //console.log(chrome.runtime.lastError);
         if (typeof chrome.runtime.lastError === 'undefined'){
-          console.log(chrome.runtime.lastError);
+          //console.log(chrome.runtime.lastError);
+          console.log("saved data");
         }
         else {
+          console.log(chrome.runtime.lastError);
           clearOldHistory();
           saveData();
         }
